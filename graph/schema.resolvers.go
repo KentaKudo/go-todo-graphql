@@ -26,18 +26,29 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, title string, descrip
 }
 
 func (r *mutationResolver) UpdateTodo(ctx context.Context, id string, input model.NewTodo) (bool, error) {
-	mapping := map[model.Status]service.Todo_Status{
-		model.StatusCreated:    service.TODO_STATUS_CREATED,
-		model.StatusInProgress: service.TODO_STATUS_IN_PROGRESS,
-		model.StatusDone:       service.TODO_STATUS_DONE,
+	var (
+		title, description string
+		status             service.Todo_Status
+	)
+
+	if t := input.Title; t != nil {
+		title = *t
+	}
+
+	if d := input.Description; d != nil {
+		description = *d
+	}
+
+	if s := input.Status; s != nil {
+		status = *s
 	}
 
 	req := &service.UpdateRequest{
 		Todo: &service.Todo{
 			Id:          id,
-			Title:       *input.Title,
-			Description: *input.Description,
-			Status:      mapping[*input.Status],
+			Title:       title,
+			Description: description,
+			Status:      status,
 		},
 	}
 
@@ -84,26 +95,11 @@ func (r *queryResolver) Todos(ctx context.Context) ([]*service.Todo, error) {
 	return resp.GetTodos(), nil
 }
 
-func (r *todoResolver) Status(ctx context.Context, obj *service.Todo) (model.Status, error) {
-	mapping := map[service.Todo_Status]model.Status{
-		service.TODO_STATUS_UNKNOWN:     model.StatusCreated,
-		service.TODO_STATUS_CREATED:     model.StatusCreated,
-		service.TODO_STATUS_IN_PROGRESS: model.StatusInProgress,
-		service.TODO_STATUS_DONE:        model.StatusDone,
-	}
-
-	return mapping[obj.GetStatus()], nil
-}
-
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-// Todo returns generated.TodoResolver implementation.
-func (r *Resolver) Todo() generated.TodoResolver { return &todoResolver{r} }
-
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type todoResolver struct{ *Resolver }

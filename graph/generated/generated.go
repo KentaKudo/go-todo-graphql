@@ -12,6 +12,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	todo "github.com/KentaKudo/go-todo-graphql"
 	"github.com/KentaKudo/go-todo-graphql/graph/model"
 	"github.com/KentaKudo/go-todo-graphql/internal/pb/service"
 	gqlparser "github.com/vektah/gqlparser/v2"
@@ -38,7 +39,6 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Todo() TodoResolver
 }
 
 type DirectiveRoot struct {
@@ -72,9 +72,6 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Todo(ctx context.Context, id string) (*service.Todo, error)
 	Todos(ctx context.Context) ([]*service.Todo, error)
-}
-type TodoResolver interface {
-	Status(ctx context.Context, obj *service.Todo) (model.Status, error)
 }
 
 type executableSchema struct {
@@ -791,13 +788,13 @@ func (ec *executionContext) _Todo_status(ctx context.Context, field graphql.Coll
 		Object:   "Todo",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Todo().Status(rctx, obj)
+		return obj.Status, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -809,9 +806,9 @@ func (ec *executionContext) _Todo_status(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.Status)
+	res := resTmp.(service.Todo_Status)
 	fc.Result = res
-	return ec.marshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx, field.Selections, res)
+	return ec.marshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1895,7 +1892,7 @@ func (ec *executionContext) unmarshalInputNewTodo(ctx context.Context, obj inter
 			var err error
 
 			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("status"))
-			it.Status, err = ec.unmarshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx, v)
+			it.Status, err = ec.unmarshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2026,32 +2023,23 @@ func (ec *executionContext) _Todo(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Todo_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "title":
 			out.Values[i] = ec._Todo_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "description":
 			out.Values[i] = ec._Todo_description(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "status":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Todo_status(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._Todo_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2343,14 +2331,19 @@ func (ec *executionContext) unmarshalNNewTodo2githubᚗcomᚋKentaKudoᚋgoᚑto
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx context.Context, v interface{}) (model.Status, error) {
-	var res model.Status
-	err := res.UnmarshalGQL(v)
+func (ec *executionContext) unmarshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx context.Context, v interface{}) (service.Todo_Status, error) {
+	res, err := todo.UnmarshalTodoStatus(v)
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx context.Context, sel ast.SelectionSet, v model.Status) graphql.Marshaler {
-	return v
+func (ec *executionContext) marshalNStatus2githubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx context.Context, sel ast.SelectionSet, v service.Todo_Status) graphql.Marshaler {
+	res := todo.MarshalTodoStatus(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -2672,20 +2665,19 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
-func (ec *executionContext) unmarshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx context.Context, v interface{}) (*model.Status, error) {
+func (ec *executionContext) unmarshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx context.Context, v interface{}) (*service.Todo_Status, error) {
 	if v == nil {
 		return nil, nil
 	}
-	var res = new(model.Status)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
+	res, err := todo.UnmarshalTodoStatus(v)
+	return &res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋgraphᚋmodelᚐStatus(ctx context.Context, sel ast.SelectionSet, v *model.Status) graphql.Marshaler {
+func (ec *executionContext) marshalOStatus2ᚖgithubᚗcomᚋKentaKudoᚋgoᚑtodoᚑgraphqlᚋinternalᚋpbᚋserviceᚐTodo_Status(ctx context.Context, sel ast.SelectionSet, v *service.Todo_Status) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return v
+	return todo.MarshalTodoStatus(*v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
