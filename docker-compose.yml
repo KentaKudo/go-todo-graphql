@@ -1,0 +1,6 @@
+version: "2"
+services:
+  backend:
+    image: kentakudo/todo-service
+    ports:
+      - "8090:8090"
