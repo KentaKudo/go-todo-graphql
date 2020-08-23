@@ -1,0 +1,40 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/tmp
+    docker:
+      - image: circleci/golang:1
+    steps:
+      - checkout
+      - run:
+          name: Lint, Test, and Build
+          command: GOBIN=~/tmp/bin make all
+
+  deploy:
+    working_directory: ~/tmp
+    docker:
+      - image: circleci/golang:1
+    steps:
+      - checkout
+      - run:
+          name: Lint, Test, and Build
+          command: GOBIN=~/tmp/bin make all
+      - setup_remote_docker:
+      - run:
+          name: Docker Build and Push
+          command: make docker-build
+
+workflows:
+  version: 2
+  development:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: master
+  deployment:
+    jobs:
+      - deploy:
+          filters:
+            branches:
+              only: master
